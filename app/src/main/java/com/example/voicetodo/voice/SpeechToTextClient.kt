@@ -36,7 +36,7 @@ class SpeechToTextClient(private val context: Context) {
             override fun onBeginningOfSpeech() {}
             override fun onRmsChanged(rmsdB: Float) {}
             override fun onBufferReceived(buffer: ByteArray?) {
-                if (!buffer.isNullOrEmpty()) {
+                if (buffer != null && buffer.isNotEmpty()) {
                     pcmBuffer.write(buffer)
                 }
             }
