@@ -78,36 +78,25 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
         _uiState.update { it.copy(isListening = true, message = "开始说话，结束后自动创建") }
 
-        val file = container.voiceStorage.createAudioFile()
-        var recordingStarted = false
-        try {
-            container.voiceRecorder.start(file)
-            recordingStarted = true
-        } catch (_: Exception) {
-            _uiState.update { it.copy(message = "录音保存失败，将仅做语音识别") }
-        }
-
         container.speechClient.startOnce(
-            onResult = { recognized ->
+            storage = container.voiceStorage,
+            onResult = { recognized, audioPath ->
                 viewModelScope.launch {
-                    val path = if (recordingStarted) container.voiceRecorder.stop() else null
                     _uiState.update {
                         it.copy(
                             recognizedText = recognized,
-                            lastAudioPath = path,
+                            lastAudioPath = audioPath,
                             isListening = false,
                         )
                     }
-                    createFromVoice(recognized, path)
+                    createFromVoice(recognized, audioPath)
                 }
             },
             onError = { error ->
                 viewModelScope.launch {
-                    val path = if (recordingStarted) container.voiceRecorder.stop() else null
                     _uiState.update {
                         it.copy(
                             isListening = false,
-                            lastAudioPath = path,
                             message = error,
                         )
                     }
@@ -118,7 +107,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun cancelVoiceListening() {
         container.speechClient.cancel()
-        container.voiceRecorder.stopSafely()
         _uiState.update { it.copy(isListening = false, message = "已取消语音输入") }
     }
 

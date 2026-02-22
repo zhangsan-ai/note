@@ -5,29 +5,37 @@ import android.content.Context
 import android.content.Intent
 import com.example.voicetodo.VoiceTodoApp
 import com.example.voicetodo.reminder.ReminderPolicy
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
 class ReminderReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val reminderId = intent.getLongExtra(AlarmScheduler.EXTRA_REMINDER_ID, -1L)
         if (reminderId <= 0L) return
 
+        val pendingResult = goAsync()
         val app = context.applicationContext as VoiceTodoApp
         val container = app.container
 
-        runBlocking {
-            val reminder = container.repository.getReminder(reminderId) ?: return@runBlocking
-            if (!reminder.isEnabled) return@runBlocking
+        CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
+            try {
+                val reminder = container.repository.getReminder(reminderId) ?: return@launch
+                if (!reminder.isEnabled) return@launch
 
-            val todoId = container.repository.reminderTodoId(reminderId) ?: return@runBlocking
-            val title = container.repository.todoTitle(todoId)
-            container.notifier.showReminder(reminderId, title)
+                val todoId = container.repository.reminderTodoId(reminderId) ?: return@launch
+                val title = container.repository.todoTitle(todoId)
+                container.notifier.showReminder(reminderId, title)
 
-            // Default behavior: if user does not close it, keep reminding every 5 minutes.
-            val now = System.currentTimeMillis()
-            val nextAt = ReminderPolicy.nextAtAfterNoAction(now)
-            container.repository.markFiredAndReschedule(reminderId, now, nextAt)
-            container.alarmScheduler.schedule(reminderId, nextAt)
+                // Default behavior: if user does not close it, keep reminding every 5 minutes.
+                val now = System.currentTimeMillis()
+                val nextAt = ReminderPolicy.nextAtAfterNoAction(now)
+                container.repository.markFiredAndReschedule(reminderId, now, nextAt)
+                container.alarmScheduler.schedule(reminderId, nextAt)
+            } finally {
+                pendingResult.finish()
+            }
         }
     }
 }

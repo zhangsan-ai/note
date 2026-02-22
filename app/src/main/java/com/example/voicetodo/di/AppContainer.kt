@@ -8,7 +8,6 @@ import com.example.voicetodo.data.AppRepository
 import com.example.voicetodo.notification.ReminderNotifier
 import com.example.voicetodo.parser.ChineseTimeParser
 import com.example.voicetodo.voice.SpeechToTextClient
-import com.example.voicetodo.voice.VoiceRecorder
 import com.example.voicetodo.voice.VoiceStorage
 
 class AppContainer(context: Context) {
@@ -28,6 +27,5 @@ class AppContainer(context: Context) {
     val alarmScheduler = AlarmScheduler(context)
     val notifier = ReminderNotifier(context)
     val voiceStorage = VoiceStorage(context)
-    val voiceRecorder = VoiceRecorder(context)
     val speechClient = SpeechToTextClient(context)
 }

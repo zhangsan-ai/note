@@ -36,8 +36,9 @@
 ## 说明
 
 - 你要求“先实现功能不本地编译”，本仓库代码已完整落地。
-- 当前环境无法访问 GitHub/Gradle 下载源，因此未能拉取 `gradle-wrapper.jar`。
-- 若要在本地编译，请在 Android Studio 打开后执行一次 `Gradle wrapper` 生成缺失文件（或在可联网环境补齐 wrapper）。
+- 已补齐 `gradle-wrapper.jar` 与 `gradlew` 脚本。
+- 当前执行环境未安装 Java，所以这里无法直接跑 `./gradlew`；在本地装好 JDK 17+ 即可构建。
+- 语音原音通过识别回调音频缓冲尽量保存为 wav；个别机型可能拿不到缓冲，此时仅保存识别文本。
 
 ## 上传到 GitHub
 

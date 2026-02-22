@@ -6,20 +6,40 @@ import android.os.Bundle
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
+import java.io.ByteArrayOutputStream
 import java.util.Locale
 
 class SpeechToTextClient(private val context: Context) {
     private var recognizer: SpeechRecognizer? = null
 
-    fun startOnce(onResult: (String) -> Unit, onError: (String) -> Unit) {
-        val speechRecognizer = SpeechRecognizer.createSpeechRecognizer(context)
-        recognizer = speechRecognizer
+    fun startOnce(
+        storage: VoiceStorage,
+        onResult: (text: String, audioPath: String?) -> Unit,
+        onError: (String) -> Unit,
+    ) {
+        if (!SpeechRecognizer.isRecognitionAvailable(context)) {
+            onError("设备不支持语音识别服务")
+            return
+        }
+
+        val pcmBuffer = ByteArrayOutputStream()
+
+        val speechRecognizer = try {
+            SpeechRecognizer.createSpeechRecognizer(context).also { recognizer = it }
+        } catch (_: Exception) {
+            onError("语音识别服务初始化失败")
+            return
+        }
 
         speechRecognizer.setRecognitionListener(object : RecognitionListener {
             override fun onReadyForSpeech(params: Bundle?) {}
             override fun onBeginningOfSpeech() {}
             override fun onRmsChanged(rmsdB: Float) {}
-            override fun onBufferReceived(buffer: ByteArray?) {}
+            override fun onBufferReceived(buffer: ByteArray?) {
+                if (!buffer.isNullOrEmpty()) {
+                    pcmBuffer.write(buffer)
+                }
+            }
             override fun onEndOfSpeech() {}
             override fun onEvent(eventType: Int, params: Bundle?) {}
 
@@ -36,7 +56,8 @@ class SpeechToTextClient(private val context: Context) {
                 if (text.isBlank()) {
                     onError("没有识别到语音")
                 } else {
-                    onResult(text)
+                    val audioPath = storage.savePcmAsWav(pcmBuffer.toByteArray())
+                    onResult(text, audioPath)
                 }
                 destroy()
             }
@@ -48,11 +69,19 @@ class SpeechToTextClient(private val context: Context) {
             putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false)
         }
 
-        speechRecognizer.startListening(intent)
+        try {
+            speechRecognizer.startListening(intent)
+        } catch (_: Exception) {
+            onError("启动语音识别失败")
+            destroy()
+        }
     }
 
     fun cancel() {
-        recognizer?.cancel()
+        try {
+            recognizer?.cancel()
+        } catch (_: Exception) {
+        }
         destroy()
     }
 

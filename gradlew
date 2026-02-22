@@ -1,5 +1,19 @@
 #!/usr/bin/env sh
 
-echo "Gradle wrapper is not bundled in this environment."
-echo "Please run 'gradle wrapper' in a network-enabled environment or open with Android Studio to regenerate wrapper files."
-exit 1
+set -eu
+
+APP_HOME=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+CLASSPATH="$APP_HOME/gradle/wrapper/gradle-wrapper.jar"
+
+if [ ! -f "$CLASSPATH" ]; then
+  echo "Missing gradle wrapper jar: $CLASSPATH" >&2
+  exit 1
+fi
+
+if [ -n "${JAVA_HOME:-}" ]; then
+  JAVACMD="$JAVA_HOME/bin/java"
+else
+  JAVACMD="java"
+fi
+
+exec "$JAVACMD" -Dorg.gradle.appname=gradlew -classpath "$CLASSPATH" org.gradle.wrapper.GradleWrapperMain "$@"
