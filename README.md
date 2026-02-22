@@ -1,0 +1,52 @@
+# VoiceTodo (Android)
+
+极简待办提醒 App（Android / Kotlin / Compose），支持：
+
+- 手动输入待办
+- 快捷定时（无提醒、5m、10m、15m、30m、1h、2h、3h、6h、12h、24h）
+- 语音识别创建待办
+- 保存原始语音文件并可回放
+- 通知栏动作：`关闭`、`延后5分钟`
+- 未关闭时自动每 5 分钟继续提醒（无限）
+- 开机后恢复未关闭提醒
+
+## 目录结构
+
+- `app/src/main/java/com/example/voicetodo/ui`：界面与状态
+- `app/src/main/java/com/example/voicetodo/parser`：中文时间解析
+- `app/src/main/java/com/example/voicetodo/data`：Room 本地数据
+- `app/src/main/java/com/example/voicetodo/alarm`：闹钟调度与通知动作
+- `app/src/main/java/com/example/voicetodo/boot`：开机恢复
+- `app/src/main/java/com/example/voicetodo/voice`：录音与语音识别
+
+## 权限
+
+- `RECORD_AUDIO`
+- `POST_NOTIFICATIONS`
+- `SCHEDULE_EXACT_ALARM`
+- `RECEIVE_BOOT_COMPLETED`
+
+## 语音命令示例
+
+- `10分钟后提醒喝水`
+- `2小时后提醒开会`
+- `今晚8点提醒复盘`
+- `明天早上9点提醒我发邮件`
+
+## 说明
+
+- 你要求“先实现功能不本地编译”，本仓库代码已完整落地。
+- 当前环境无法访问 GitHub/Gradle 下载源，因此未能拉取 `gradle-wrapper.jar`。
+- 若要在本地编译，请在 Android Studio 打开后执行一次 `Gradle wrapper` 生成缺失文件（或在可联网环境补齐 wrapper）。
+
+## 上传到 GitHub
+
+```bash
+git init
+git add .
+git commit -m "feat: android voice todo reminder app"
+# 替换为你的仓库地址
+git remote add origin https://github.com/<your-account>/<repo>.git
+git branch -M main
+git push -u origin main
+```

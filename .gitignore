@@ -1,1 +1,17 @@
+# Android
+*.iml
+.gradle/
+local.properties
+/.idea/
+/build/
+/captures/
+
+# Module build
+app/build/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Worktree folder
 .worktrees/
