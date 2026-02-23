@@ -15,6 +15,17 @@ class AppRepository(
     private val voiceNoteDao: VoiceNoteDao,
 ) {
     data class CreateTodoResult(val todoId: Long, val reminderId: Long?)
+    data class ReminderNotificationInfo(
+        val reminderId: Long,
+        val todoId: Long,
+        val contentText: String,
+        val audioPath: String?,
+    )
+
+    data class ClearCompletedResult(
+        val deletedCount: Int,
+        val cancelledReminderIds: List<Long>,
+    )
 
     fun observeTodoRows(): Flow<List<TodoListItemDbRow>> = todoDao.observeTodoRows()
 
@@ -81,4 +92,31 @@ class AppRepository(
     suspend fun reminderTodoId(reminderId: Long): Long? = reminderDao.getTodoId(reminderId)
 
     suspend fun todoTitle(todoId: Long): String = todoDao.getContent(todoId) ?: "待办"
+
+    suspend fun reminderNotificationInfo(reminderId: Long): ReminderNotificationInfo? {
+        val reminder = reminderDao.findById(reminderId) ?: return null
+        if (!reminder.isEnabled) return null
+        val contentText = todoDao.getContent(reminder.todoId) ?: "待办"
+        val audioPath = voiceNoteDao.latestAudioPathByTodoId(reminder.todoId)
+        return ReminderNotificationInfo(
+            reminderId = reminderId,
+            todoId = reminder.todoId,
+            contentText = contentText,
+            audioPath = audioPath,
+        )
+    }
+
+    suspend fun completedTodoCount(): Int = todoDao.countCompleted()
+
+    suspend fun clearCompletedTodos(): ClearCompletedResult {
+        val reminderIds = reminderDao.findEnabledIdsByTodoStatus("DONE")
+        if (reminderIds.isNotEmpty()) {
+            reminderDao.disableByIds(reminderIds)
+        }
+        val deletedCount = todoDao.deleteCompleted()
+        return ClearCompletedResult(
+            deletedCount = deletedCount,
+            cancelledReminderIds = reminderIds,
+        )
+    }
 }

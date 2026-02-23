@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -48,7 +49,11 @@ fun MainScreen(
     onVoiceCancel: () -> Unit,
     onPlayAudio: () -> Unit,
     onPlayItemAudio: (String) -> Unit,
+    onToggleTestAlarmTone: () -> Unit,
     onMarkDone: (Long, Long?) -> Unit,
+    onRequestClearCompleted: () -> Unit,
+    onConfirmClearCompleted: () -> Unit,
+    onDismissClearCompleted: () -> Unit,
 ) {
     Scaffold(
         topBar = {
@@ -74,22 +79,23 @@ fun MainScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 item {
-                    ManualCreateCard(
-                        state = state,
-                        quickOptions = quickOptions,
-                        onInputChange = onInputChange,
-                        onQuickSelected = onQuickSelected,
-                        onAddManual = onAddManual,
-                    )
-                }
-
-                item {
                     VoiceCreateCard(
                         state = state,
                         onVoiceStart = onVoiceStart,
                         onVoiceStop = onVoiceStop,
                         onVoiceCancel = onVoiceCancel,
                         onPlayAudio = onPlayAudio,
+                        onToggleTestAlarmTone = onToggleTestAlarmTone,
+                    )
+                }
+
+                item {
+                    ManualCreateCard(
+                        state = state,
+                        quickOptions = quickOptions,
+                        onInputChange = onInputChange,
+                        onQuickSelected = onQuickSelected,
+                        onAddManual = onAddManual,
                     )
                 }
 
@@ -106,11 +112,22 @@ fun MainScreen(
                 }
 
                 item {
-                    Text(
-                        text = "待办列表（未完成优先）",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = "待办列表（未完成优先）",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        if (state.completedCount > 0) {
+                            TextButton(onClick = onRequestClearCompleted) {
+                                Text("清除已完成（${state.completedCount}）")
+                            }
+                        }
+                    }
                 }
 
                 if (state.todos.isEmpty()) {
@@ -134,6 +151,24 @@ fun MainScreen(
                 }
             }
         }
+
+        if (state.showClearCompletedConfirm) {
+            AlertDialog(
+                onDismissRequest = onDismissClearCompleted,
+                confirmButton = {
+                    TextButton(onClick = onConfirmClearCompleted) {
+                        Text("确认清除")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = onDismissClearCompleted) {
+                        Text("取消")
+                    }
+                },
+                title = { Text("清除已完成") },
+                text = { Text("将删除全部已完成待办，此操作不可撤销。") },
+            )
+        }
     }
 }
 
@@ -153,12 +188,12 @@ private fun ManualCreateCard(
                 .padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Text(text = "文本创建", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+            Text(text = "文本辅助", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
             OutlinedTextField(
                 value = state.manualInput,
                 onValueChange = onInputChange,
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text("待办标题") },
+                label = { Text("补充标题（可选）") },
                 placeholder = { Text("例如：喝水、开会、复盘") },
                 singleLine = true,
             )
@@ -168,15 +203,10 @@ private fun ManualCreateCard(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 quickOptions.forEach { minute ->
-                    val label = when {
-                        minute == 0L -> "无提醒"
-                        minute < 60L -> "${minute}m"
-                        else -> "${minute / 60}h"
-                    }
                     FilterChip(
                         selected = state.selectedMinutes == minute,
                         onClick = { onQuickSelected(minute) },
-                        label = { Text(text = label) },
+                        label = { Text(text = formatQuickOptionLabel(minute)) },
                     )
                 }
             }
@@ -184,7 +214,7 @@ private fun ManualCreateCard(
                 modifier = Modifier.fillMaxWidth(),
                 onClick = onAddManual,
             ) {
-                Text("添加文本待办")
+                Text("仅文本创建")
             }
         }
     }
@@ -197,6 +227,7 @@ private fun VoiceCreateCard(
     onVoiceStop: () -> Unit,
     onVoiceCancel: () -> Unit,
     onPlayAudio: () -> Unit,
+    onToggleTestAlarmTone: () -> Unit,
 ) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(
@@ -205,9 +236,9 @@ private fun VoiceCreateCard(
                 .padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Text(text = "语音创建（仅原音）", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+            Text(text = "语音创建（主流程）", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
             Text(
-                text = "已取消语音识别，录音会直接作为待办原音保存。",
+                text = "录音将直接作为待办原音；文本输入仅做辅助标题。",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -231,6 +262,10 @@ private fun VoiceCreateCard(
                 TextButton(onClick = onPlayAudio) {
                     Text("播放最近原音")
                 }
+            }
+
+            TextButton(onClick = onToggleTestAlarmTone) {
+                Text(if (state.isTestingAlarmTone) "停止测试铃声" else "测试铃声")
             }
         }
     }

@@ -24,9 +24,12 @@ class ReminderReceiver : BroadcastReceiver() {
                 val reminder = container.repository.getReminder(reminderId) ?: return@launch
                 if (!reminder.isEnabled) return@launch
 
-                val todoId = container.repository.reminderTodoId(reminderId) ?: return@launch
-                val title = container.repository.todoTitle(todoId)
-                container.notifier.showReminder(reminderId, title)
+                val info = container.repository.reminderNotificationInfo(reminderId) ?: return@launch
+                container.notifier.showReminder(
+                    reminderId = reminderId,
+                    contentText = info.contentText,
+                    hasAudio = !info.audioPath.isNullOrBlank(),
+                )
 
                 // Default behavior: if user does not close it, keep reminding every 5 minutes.
                 val now = System.currentTimeMillis()

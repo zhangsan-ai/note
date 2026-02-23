@@ -18,7 +18,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _uiState = MutableStateFlow(MainUiState())
     val uiState: StateFlow<MainUiState> = _uiState.asStateFlow()
 
-    private val quickOptions = listOf(0L, 5L, 10L, 15L, 30L, 60L, 120L, 180L, 360L, 720L, 1440L)
+    private val quickOptions = listOf(0L, 5L, 10L, 15L, 30L, 60L, 120L, 180L, 360L, 720L, 1440L, 2880L, 4320L)
 
     init {
         observeTodos()
@@ -40,6 +40,27 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setMessage(message: String?) {
         _uiState.update { it.copy(message = message) }
+    }
+
+    fun toggleTestAlarmTone() {
+        if (_uiState.value.isTestingAlarmTone) {
+            container.notifier.stopTestAlarmTone()
+            _uiState.update {
+                it.copy(
+                    isTestingAlarmTone = false,
+                    message = "已停止测试铃声",
+                )
+            }
+            return
+        }
+
+        val started = container.notifier.playTestAlarmTone()
+        _uiState.update {
+            it.copy(
+                isTestingAlarmTone = started,
+                message = if (started) "正在测试铃声" else "无法播放测试铃声",
+            )
+        }
     }
 
     fun addManualTodo() {
@@ -199,6 +220,36 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun requestClearCompleted() {
+        if (_uiState.value.completedCount <= 0) return
+        _uiState.update { it.copy(showClearCompletedConfirm = true) }
+    }
+
+    fun dismissClearCompletedConfirm() {
+        _uiState.update { it.copy(showClearCompletedConfirm = false) }
+    }
+
+    fun clearCompletedTodos() {
+        viewModelScope.launch {
+            val result = container.repository.clearCompletedTodos()
+            result.cancelledReminderIds.forEach { reminderId ->
+                container.alarmScheduler.cancel(reminderId)
+                container.notifier.cancel(reminderId)
+            }
+            refreshResidentNotification()
+            _uiState.update {
+                it.copy(
+                    showClearCompletedConfirm = false,
+                    message = if (result.deletedCount > 0) {
+                        "已清除 ${result.deletedCount} 条已完成待办"
+                    } else {
+                        "没有可清除的已完成待办"
+                    }
+                )
+            }
+        }
+    }
+
     private suspend fun refreshResidentNotification() {
         val activeCount = container.repository.activeReminderCount()
         container.notifier.showResidentStatus(activeCount)
@@ -220,7 +271,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 }
                 _uiState.update {
                     it.copy(
-                        todos = prioritizeTodos(mapped)
+                        todos = prioritizeTodos(mapped),
+                        completedCount = mapped.count { todo -> todo.status == "DONE" },
                     )
                 }
             }
@@ -229,6 +281,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     override fun onCleared() {
         container.voiceRecorder.stopSafely()
+        container.notifier.stopTestAlarmTone()
         pendingRecordingPath = null
         super.onCleared()
     }

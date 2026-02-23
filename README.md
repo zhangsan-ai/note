@@ -1,14 +1,17 @@
-# VoiceTodo (Android)
+# 待办清单 (Android)
 
 极简待办提醒 App（Android / Kotlin / Compose），支持：
 
-- 手动输入待办
-- 快捷定时（无提醒、5m、10m、15m、30m、1h、2h、3h、6h、12h、24h）
-- 录音创建待办（取消语音识别）
+- 语音主流程创建待办（文本输入为辅助）
+- 快捷定时（无提醒、5分钟、10分钟、15分钟、30分钟、1小时、2小时、3小时、6小时、12小时、24小时、2天、3天）
 - 保存原始语音文件并可直接回放
-- 通知栏动作：`关闭`、`延后5分钟`
+- 通知栏动作：`关闭`、`延后5分钟`、`播放语音`
+- 通知展示真实待办正文（含展开大文本）
+- 提醒采用闹钟策略（优先 `setAlarmClock`）并使用系统闹铃声
+- 提供“测试铃声”按钮验证设备铃声链路
 - 未关闭时自动每 5 分钟继续提醒（无限）
 - 常驻通知：有未完成提醒时通知栏保持驻留
+- 一键清除已完成（含二次确认）
 - 开机后恢复未关闭提醒
 
 ## 目录结构
@@ -26,6 +29,9 @@
 - `POST_NOTIFICATIONS`
 - `SCHEDULE_EXACT_ALARM`
 - `RECEIVE_BOOT_COMPLETED`
+- `USE_FULL_SCREEN_INTENT`
+- `FOREGROUND_SERVICE`
+- `FOREGROUND_SERVICE_MEDIA_PLAYBACK`
 
 ## 语音录音说明
 

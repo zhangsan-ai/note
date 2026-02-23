@@ -6,6 +6,16 @@ import org.junit.Test
 
 class TodoPresentationPolicyTest {
     @Test
+    fun quickOptionLabelsUseChineseUnits() {
+        assertEquals("无提醒", formatQuickOptionLabel(0))
+        assertEquals("5分钟", formatQuickOptionLabel(5))
+        assertEquals("1小时", formatQuickOptionLabel(60))
+        assertEquals("24小时", formatQuickOptionLabel(1440))
+        assertEquals("2天", formatQuickOptionLabel(2880))
+        assertEquals("3天", formatQuickOptionLabel(4320))
+    }
+
+    @Test
     fun prioritizeActiveTodosBeforeDone() {
         val todos = listOf(
             TodoUiItem(

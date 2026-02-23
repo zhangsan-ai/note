@@ -41,4 +41,17 @@ interface ReminderDao {
 
     @Query("SELECT trigger_at_epoch_ms FROM reminder WHERE id = :reminderId LIMIT 1")
     suspend fun getTriggerAt(reminderId: Long): Long?
+
+    @Query(
+        """
+        SELECT r.id
+        FROM reminder r
+        INNER JOIN todo_item t ON t.id = r.todo_id
+        WHERE r.is_enabled = 1 AND t.status = :status
+        """
+    )
+    suspend fun findEnabledIdsByTodoStatus(status: String): List<Long>
+
+    @Query("UPDATE reminder SET is_enabled = 0 WHERE id IN (:reminderIds)")
+    suspend fun disableByIds(reminderIds: List<Long>): Int
 }

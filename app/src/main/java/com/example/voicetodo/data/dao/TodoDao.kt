@@ -44,4 +44,10 @@ interface TodoDao {
 
     @Query("SELECT content_text FROM todo_item WHERE id = :todoId LIMIT 1")
     suspend fun getContent(todoId: Long): String?
+
+    @Query("SELECT COUNT(*) FROM todo_item WHERE status = 'DONE'")
+    suspend fun countCompleted(): Int
+
+    @Query("DELETE FROM todo_item WHERE status = 'DONE'")
+    suspend fun deleteCompleted(): Int
 }

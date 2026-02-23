@@ -50,7 +50,11 @@ class MainActivity : ComponentActivity() {
                     onVoiceCancel = viewModel::cancelVoiceRecording,
                     onPlayAudio = viewModel::playLastAudio,
                     onPlayItemAudio = viewModel::playAudioPath,
+                    onToggleTestAlarmTone = viewModel::toggleTestAlarmTone,
                     onMarkDone = viewModel::markTodoDone,
+                    onRequestClearCompleted = viewModel::requestClearCompleted,
+                    onConfirmClearCompleted = viewModel::clearCompletedTodos,
+                    onDismissClearCompleted = viewModel::dismissClearCompletedConfirm,
                 )
             }
         }

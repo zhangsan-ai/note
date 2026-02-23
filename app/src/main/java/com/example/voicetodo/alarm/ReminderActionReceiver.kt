@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import com.example.voicetodo.VoiceTodoApp
 import com.example.voicetodo.reminder.ReminderPolicy
+import com.example.voicetodo.voice.VoicePlaybackService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -36,6 +37,19 @@ class ReminderActionReceiver : BroadcastReceiver() {
                         container.notifier.cancel(reminderId)
                         container.notifier.showResidentStatus(container.repository.activeReminderCount())
                     }
+
+                    ACTION_PLAY_AUDIO -> {
+                        val info = container.repository.reminderNotificationInfo(reminderId)
+                        val audioPath = info?.audioPath
+                        if (!audioPath.isNullOrBlank()) {
+                            VoicePlaybackService.startPlayback(
+                                context = context.applicationContext,
+                                reminderId = reminderId,
+                                contentText = info.contentText,
+                                audioPath = audioPath,
+                            )
+                        }
+                    }
                 }
             } finally {
                 pendingResult.finish()
@@ -46,6 +60,7 @@ class ReminderActionReceiver : BroadcastReceiver() {
     companion object {
         const val ACTION_DISMISS = "com.example.voicetodo.ACTION_DISMISS"
         const val ACTION_SNOOZE = "com.example.voicetodo.ACTION_SNOOZE"
+        const val ACTION_PLAY_AUDIO = "com.example.voicetodo.ACTION_PLAY_AUDIO"
         const val EXTRA_REMINDER_ID = "extra_action_reminder_id"
     }
 }

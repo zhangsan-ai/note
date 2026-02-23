@@ -15,6 +15,9 @@ data class MainUiState(
     val selectedMinutes: Long? = 10,
     val lastAudioPath: String? = null,
     val isRecording: Boolean = false,
+    val isTestingAlarmTone: Boolean = false,
+    val completedCount: Int = 0,
+    val showClearCompletedConfirm: Boolean = false,
     val message: String? = null,
     val todos: List<TodoUiItem> = emptyList(),
 )
