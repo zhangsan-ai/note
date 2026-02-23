@@ -22,6 +22,7 @@ import com.example.voicetodo.alarm.ReminderActionReceiver
 class ReminderNotifier(private val context: Context) {
     private val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
     private var testRingtone: Ringtone? = null
+    private var reminderRingtone: Ringtone? = null
 
     fun ensureChannel() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
@@ -146,8 +147,9 @@ class ReminderNotifier(private val context: Context) {
         }
 
         val notification = notificationBuilder.build()
-
+        manager.cancel(reminderId.toInt())
         manager.notify(reminderId.toInt(), notification)
+        playReminderTone()
     }
 
     fun showResidentStatus(activeCount: Int) {
@@ -185,6 +187,7 @@ class ReminderNotifier(private val context: Context) {
 
     fun cancel(reminderId: Long) {
         manager.cancel(reminderId.toInt())
+        stopReminderTone()
     }
 
     fun playTestAlarmTone(): Boolean {
@@ -200,6 +203,11 @@ class ReminderNotifier(private val context: Context) {
     fun stopTestAlarmTone() {
         testRingtone?.stop()
         testRingtone = null
+    }
+
+    fun stopReminderTone() {
+        reminderRingtone?.stop()
+        reminderRingtone = null
     }
 
     private fun canPostNotifications(): Boolean {
@@ -243,8 +251,17 @@ class ReminderNotifier(private val context: Context) {
         }
     }
 
+    private fun playReminderTone() {
+        val ringtone = runCatching {
+            RingtoneManager.getRingtone(context, defaultAlarmUri())
+        }.getOrNull() ?: return
+        stopReminderTone()
+        ringtone.play()
+        reminderRingtone = ringtone
+    }
+
     companion object {
-        const val CHANNEL_ID = "todo_reminder_channel_v2"
+        const val CHANNEL_ID = "todo_reminder_channel_v3"
         private const val STATUS_CHANNEL_ID = "todo_reminder_status_channel_v1"
         private const val RESIDENT_NOTIFICATION_ID = 990099
     }

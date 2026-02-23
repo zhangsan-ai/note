@@ -282,6 +282,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     override fun onCleared() {
         container.voiceRecorder.stopSafely()
         container.notifier.stopTestAlarmTone()
+        container.notifier.stopReminderTone()
         pendingRecordingPath = null
         super.onCleared()
     }
