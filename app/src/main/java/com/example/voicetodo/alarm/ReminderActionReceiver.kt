@@ -26,6 +26,7 @@ class ReminderActionReceiver : BroadcastReceiver() {
                         container.repository.disableReminder(reminderId)
                         container.alarmScheduler.cancel(reminderId)
                         container.notifier.cancel(reminderId)
+                        container.notifier.showResidentStatus(container.repository.activeReminderCount())
                     }
 
                     ACTION_SNOOZE -> {
@@ -33,6 +34,7 @@ class ReminderActionReceiver : BroadcastReceiver() {
                         container.repository.snoozeReminder(reminderId, nextAt)
                         container.alarmScheduler.schedule(reminderId, nextAt)
                         container.notifier.cancel(reminderId)
+                        container.notifier.showResidentStatus(container.repository.activeReminderCount())
                     }
                 }
             } finally {

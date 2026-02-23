@@ -16,6 +16,9 @@ interface ReminderDao {
     @Query("SELECT * FROM reminder WHERE is_enabled = 1")
     suspend fun findEnabled(): List<ReminderEntity>
 
+    @Query("SELECT COUNT(*) FROM reminder WHERE is_enabled = 1")
+    suspend fun countEnabled(): Int
+
     @Query("UPDATE reminder SET is_enabled = 0 WHERE id = :reminderId")
     suspend fun disable(reminderId: Long)
 

@@ -6,8 +6,7 @@ import com.example.voicetodo.alarm.AlarmScheduler
 import com.example.voicetodo.data.AppDatabase
 import com.example.voicetodo.data.AppRepository
 import com.example.voicetodo.notification.ReminderNotifier
-import com.example.voicetodo.parser.ChineseTimeParser
-import com.example.voicetodo.voice.SpeechToTextClient
+import com.example.voicetodo.voice.VoiceRecorder
 import com.example.voicetodo.voice.VoiceStorage
 
 class AppContainer(context: Context) {
@@ -23,9 +22,8 @@ class AppContainer(context: Context) {
         voiceNoteDao = database.voiceNoteDao(),
     )
 
-    val parser = ChineseTimeParser()
     val alarmScheduler = AlarmScheduler(context)
     val notifier = ReminderNotifier(context)
     val voiceStorage = VoiceStorage(context)
-    val speechClient = SpeechToTextClient(context)
+    val voiceRecorder = VoiceRecorder(context)
 }

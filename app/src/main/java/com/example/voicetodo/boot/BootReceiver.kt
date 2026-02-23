@@ -24,6 +24,7 @@ class BootReceiver : BroadcastReceiver() {
                     val triggerAt = if (reminder.triggerAtEpochMs < now) now + 10_000L else reminder.triggerAtEpochMs
                     container.alarmScheduler.schedule(reminder.id, triggerAt)
                 }
+                container.notifier.showResidentStatus(container.repository.activeReminderCount())
             } finally {
                 pendingResult.finish()
             }

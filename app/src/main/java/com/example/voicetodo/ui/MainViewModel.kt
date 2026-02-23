@@ -5,7 +5,6 @@ import android.media.MediaPlayer
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.voicetodo.VoiceTodoApp
-import com.example.voicetodo.reminder.ReminderPolicy
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -14,6 +13,7 @@ import kotlinx.coroutines.launch
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val container = (application as VoiceTodoApp).container
+    private var pendingRecordingPath: String? = null
 
     private val _uiState = MutableStateFlow(MainUiState())
     val uiState: StateFlow<MainUiState> = _uiState.asStateFlow()
@@ -23,6 +23,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     init {
         observeTodos()
         container.notifier.ensureChannel()
+        viewModelScope.launch {
+            refreshResidentNotification()
+        }
     }
 
     fun quickOptions(): List<Long> = quickOptions
@@ -64,55 +67,108 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 triggerAt?.let { container.alarmScheduler.schedule(reminderId, it) }
             }
 
+            val reminderMessage = when {
+                triggerAt == null -> "待办已创建"
+                container.alarmScheduler.canUseExactAlarms() -> "待办已创建并设置提醒"
+                else -> "待办已创建并设置提醒（系统未授予精确闹钟，提醒可能延迟）"
+            }
+
+            refreshResidentNotification()
+
             _uiState.update {
                 it.copy(
                     manualInput = "",
-                    message = if (triggerAt != null) "待办已创建并设置提醒" else "待办已创建",
+                    message = reminderMessage,
                 )
             }
         }
     }
 
-    fun startVoiceCaptureAndRecognize() {
-        if (_uiState.value.isListening) return
+    fun startVoiceRecording() {
+        if (_uiState.value.isRecording) return
 
-        _uiState.update { it.copy(isListening = true, message = "开始说话，结束后自动创建") }
-
-        container.speechClient.startOnce(
-            storage = container.voiceStorage,
-            onResult = { recognized, audioPath ->
-                viewModelScope.launch {
-                    _uiState.update {
-                        it.copy(
-                            recognizedText = recognized,
-                            lastAudioPath = audioPath,
-                            isListening = false,
-                        )
-                    }
-                    createFromVoice(recognized, audioPath)
-                }
-            },
-            onError = { error ->
-                viewModelScope.launch {
-                    _uiState.update {
-                        it.copy(
-                            isListening = false,
-                            message = error,
-                        )
-                    }
-                }
-            },
-        )
+        runCatching {
+            val file = container.voiceStorage.createAudioFile("m4a")
+            container.voiceRecorder.start(file)
+            pendingRecordingPath = file.absolutePath
+            _uiState.update { it.copy(isRecording = true, message = "录音中，点击“结束录音并创建”保存") }
+        }.onFailure {
+            container.voiceRecorder.stopSafely()
+            pendingRecordingPath = null
+            setMessage("无法开始录音，请检查麦克风权限")
+        }
     }
 
-    fun cancelVoiceListening() {
-        container.speechClient.cancel()
-        _uiState.update { it.copy(isListening = false, message = "已取消语音输入") }
+    fun stopVoiceRecordingAndCreateTodo() {
+        if (!_uiState.value.isRecording) return
+
+        viewModelScope.launch {
+            val now = System.currentTimeMillis()
+            val triggerAt = _uiState.value.selectedMinutes
+                ?.takeIf { it > 0L }
+                ?.let { now + it * 60_000L }
+            val audioPath = container.voiceRecorder.stop() ?: pendingRecordingPath
+            pendingRecordingPath = null
+
+            if (audioPath.isNullOrBlank()) {
+                _uiState.update {
+                    it.copy(
+                        isRecording = false,
+                        message = "录音保存失败，请重试",
+                    )
+                }
+                return@launch
+            }
+
+            val title = resolveAudioTodoTitle(_uiState.value.manualInput, now)
+            val result = container.repository.createTodo(
+                content = title,
+                triggerAtEpochMs = triggerAt,
+                audioPath = audioPath,
+                sttText = null,
+                parseStatus = if (triggerAt != null) "AUDIO_ONLY_WITH_TIME" else "AUDIO_ONLY",
+                now = now,
+            )
+
+            result.reminderId?.let { reminderId ->
+                triggerAt?.let { container.alarmScheduler.schedule(reminderId, it) }
+            }
+            refreshResidentNotification()
+
+            val reminderMessage = when {
+                triggerAt == null -> "未设置提醒"
+                container.alarmScheduler.canUseExactAlarms() -> "提醒已设置"
+                else -> "提醒已设置（系统未授予精确闹钟，可能延迟）"
+            }
+
+            _uiState.update {
+                it.copy(
+                    isRecording = false,
+                    manualInput = "",
+                    lastAudioPath = audioPath,
+                    message = "语音待办已创建，$reminderMessage",
+                )
+            }
+        }
+    }
+
+    fun cancelVoiceRecording() {
+        container.voiceRecorder.stopSafely()
+        pendingRecordingPath = null
+        _uiState.update { it.copy(isRecording = false, message = "已取消录音") }
     }
 
     fun playLastAudio() {
         val path = _uiState.value.lastAudioPath ?: run {
             setMessage("没有可播放的原音")
+            return
+        }
+        playAudioPath(path)
+    }
+
+    fun playAudioPath(path: String) {
+        if (path.isBlank()) {
+            setMessage("原音路径无效")
             return
         }
 
@@ -139,54 +195,41 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 container.alarmScheduler.cancel(reminderId)
                 container.notifier.cancel(reminderId)
             }
+            refreshResidentNotification()
         }
     }
 
-    private suspend fun createFromVoice(recognized: String, audioPath: String?) {
-        val now = System.currentTimeMillis()
-        val parse = container.parser.parse(recognized, now)
-
-        val result = container.repository.createTodo(
-            content = parse.content,
-            triggerAtEpochMs = parse.triggerAtEpochMs,
-            audioPath = audioPath,
-            sttText = recognized,
-            parseStatus = if (parse.matched) "PARSED" else "UNPARSED",
-            now = now,
-        )
-
-        if (parse.triggerAtEpochMs != null && result.reminderId != null) {
-            container.alarmScheduler.schedule(result.reminderId, parse.triggerAtEpochMs)
-        }
-
-        _uiState.update {
-            it.copy(
-                message = if (parse.matched) {
-                    "语音待办已创建，提醒已设置；未关闭会每${ReminderPolicy.REPEAT_MINUTES}分钟继续提醒"
-                } else {
-                    "语音待办已创建，时间未识别，请手动选快捷时间"
-                }
-            )
-        }
+    private suspend fun refreshResidentNotification() {
+        val activeCount = container.repository.activeReminderCount()
+        container.notifier.showResidentStatus(activeCount)
     }
 
     private fun observeTodos() {
         viewModelScope.launch {
             container.repository.observeTodoRows().collect { rows ->
+                val mapped = rows.map { row ->
+                    TodoUiItem(
+                        todoId = row.todoId,
+                        title = row.contentText,
+                        status = row.status,
+                        reminderId = row.reminderId,
+                        triggerAtEpochMs = row.triggerAtEpochMs,
+                        audioPath = row.audioPath,
+                        createdAt = row.createdAt,
+                    )
+                }
                 _uiState.update {
                     it.copy(
-                        todos = rows.map { row ->
-                            TodoUiItem(
-                                todoId = row.todoId,
-                                title = row.contentText,
-                                status = row.status,
-                                reminderId = row.reminderId,
-                                triggerAtEpochMs = row.triggerAtEpochMs,
-                            )
-                        }
+                        todos = prioritizeTodos(mapped)
                     )
                 }
             }
         }
+    }
+
+    override fun onCleared() {
+        container.voiceRecorder.stopSafely()
+        pendingRecordingPath = null
+        super.onCleared()
     }
 }

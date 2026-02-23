@@ -4,10 +4,11 @@
 
 - 手动输入待办
 - 快捷定时（无提醒、5m、10m、15m、30m、1h、2h、3h、6h、12h、24h）
-- 语音识别创建待办
-- 保存原始语音文件并可回放
+- 录音创建待办（取消语音识别）
+- 保存原始语音文件并可直接回放
 - 通知栏动作：`关闭`、`延后5分钟`
 - 未关闭时自动每 5 分钟继续提醒（无限）
+- 常驻通知：有未完成提醒时通知栏保持驻留
 - 开机后恢复未关闭提醒
 
 ## 目录结构
@@ -17,7 +18,7 @@
 - `app/src/main/java/com/example/voicetodo/data`：Room 本地数据
 - `app/src/main/java/com/example/voicetodo/alarm`：闹钟调度与通知动作
 - `app/src/main/java/com/example/voicetodo/boot`：开机恢复
-- `app/src/main/java/com/example/voicetodo/voice`：录音与语音识别
+- `app/src/main/java/com/example/voicetodo/voice`：录音与原音存储
 
 ## 权限
 
@@ -26,19 +27,19 @@
 - `SCHEDULE_EXACT_ALARM`
 - `RECEIVE_BOOT_COMPLETED`
 
-## 语音命令示例
+## 语音录音说明
 
-- `10分钟后提醒喝水`
-- `2小时后提醒开会`
-- `今晚8点提醒复盘`
-- `明天早上9点提醒我发邮件`
+- 已取消语音识别，录音仅作为原音附件保存
+- 标题优先使用输入框文本；若为空则自动生成“语音待办 + 时间”
+- 提醒时间仍使用快捷时长按钮设置
+- 待办列表中可直接播放每条语音待办的原音
 
 ## 说明
 
 - 你要求“先实现功能不本地编译”，本仓库代码已完整落地。
 - 已补齐 `gradle-wrapper.jar` 与 `gradlew` 脚本。
 - 当前执行环境未安装 Java，所以这里无法直接跑 `./gradlew`；在本地装好 JDK 17+ 即可构建。
-- 语音原音通过识别回调音频缓冲尽量保存为 wav；个别机型可能拿不到缓冲，此时仅保存识别文本。
+- 语音仅走 `MediaRecorder` 录制 `m4a`，避免机型差异导致的识别不可用问题。
 
 ## 上传到 GitHub
 

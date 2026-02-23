@@ -6,7 +6,7 @@ import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.result.contract.ActivityResultContracts.RequestPermission
 import androidx.activity.viewModels
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -17,25 +17,23 @@ import com.example.voicetodo.ui.theme.VoiceTodoTheme
 class MainActivity : ComponentActivity() {
     private val viewModel by viewModels<MainViewModel>()
 
-    private val permissionLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestMultiplePermissions()
-    ) { result ->
-        val audioGranted = result[Manifest.permission.RECORD_AUDIO] == true
-        val notifyGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            result[Manifest.permission.POST_NOTIFICATIONS] == true
+    private val audioPermissionLauncher = registerForActivityResult(RequestPermission()) { granted ->
+        if (granted) {
+            viewModel.startVoiceRecording()
         } else {
-            true
+            viewModel.setMessage("请授予录音权限")
         }
+    }
 
-        if (audioGranted && notifyGranted) {
-            viewModel.startVoiceCaptureAndRecognize()
-        } else {
-            viewModel.setMessage("请授予录音和通知权限")
+    private val notificationPermissionLauncher = registerForActivityResult(RequestPermission()) { granted ->
+        if (!granted) {
+            viewModel.setMessage("通知权限未开启，提醒可能不可见")
         }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        requestNotificationPermissionIfNeeded()
 
         setContent {
             val state = viewModel.uiState.collectAsStateWithLifecycle().value
@@ -47,31 +45,33 @@ class MainActivity : ComponentActivity() {
                     onInputChange = viewModel::onManualInputChange,
                     onQuickSelected = viewModel::onQuickOptionSelected,
                     onAddManual = viewModel::addManualTodo,
-                    onVoiceStart = ::requestPermissionsAndStartVoice,
-                    onVoiceCancel = viewModel::cancelVoiceListening,
+                    onVoiceStart = ::requestAudioPermissionAndStartRecording,
+                    onVoiceStop = viewModel::stopVoiceRecordingAndCreateTodo,
+                    onVoiceCancel = viewModel::cancelVoiceRecording,
                     onPlayAudio = viewModel::playLastAudio,
+                    onPlayItemAudio = viewModel::playAudioPath,
                     onMarkDone = viewModel::markTodoDone,
                 )
             }
         }
     }
 
-    private fun requestPermissionsAndStartVoice() {
-        val required = buildList {
-            add(Manifest.permission.RECORD_AUDIO)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                add(Manifest.permission.POST_NOTIFICATIONS)
-            }
-        }
-
-        val missing = required.filter { permission ->
-            ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED
-        }
-
-        if (missing.isEmpty()) {
-            viewModel.startVoiceCaptureAndRecognize()
+    private fun requestAudioPermissionAndStartRecording() {
+        val granted = ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) ==
+            PackageManager.PERMISSION_GRANTED
+        if (granted) {
+            viewModel.startVoiceRecording()
         } else {
-            permissionLauncher.launch(missing.toTypedArray())
+            audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+        }
+    }
+
+    private fun requestNotificationPermissionIfNeeded() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
+        val granted = ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) ==
+            PackageManager.PERMISSION_GRANTED
+        if (!granted) {
+            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
     }
 }

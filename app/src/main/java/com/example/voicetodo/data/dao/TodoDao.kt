@@ -21,10 +21,20 @@ interface TodoDao {
             t.created_at AS createdAt,
             r.id AS reminderId,
             r.trigger_at_epoch_ms AS triggerAtEpochMs,
+            v.audio_path AS audioPath,
             r.is_enabled AS reminderEnabled
         FROM todo_item t
         LEFT JOIN reminder r ON r.todo_id = t.id AND r.is_enabled = 1
-        ORDER BY t.created_at DESC
+        LEFT JOIN voice_note v ON v.id = (
+            SELECT vn.id
+            FROM voice_note vn
+            WHERE vn.todo_id = t.id
+            ORDER BY vn.id DESC
+            LIMIT 1
+        )
+        ORDER BY
+            CASE WHEN t.status = 'DONE' THEN 1 ELSE 0 END ASC,
+            t.created_at DESC
         """
     )
     fun observeTodoRows(): Flow<List<TodoListItemDbRow>>

@@ -7,5 +7,6 @@ data class TodoListItemDbRow(
     val createdAt: Long,
     val reminderId: Long?,
     val triggerAtEpochMs: Long?,
+    val audioPath: String?,
     val reminderEnabled: Boolean?,
 )

@@ -33,6 +33,7 @@ class ReminderReceiver : BroadcastReceiver() {
                 val nextAt = ReminderPolicy.nextAtAfterNoAction(now)
                 container.repository.markFiredAndReschedule(reminderId, now, nextAt)
                 container.alarmScheduler.schedule(reminderId, nextAt)
+                container.notifier.showResidentStatus(container.repository.activeReminderCount())
             } finally {
                 pendingResult.finish()
             }

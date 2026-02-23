@@ -6,14 +6,15 @@ data class TodoUiItem(
     val status: String,
     val reminderId: Long?,
     val triggerAtEpochMs: Long?,
+    val audioPath: String?,
+    val createdAt: Long,
 )
 
 data class MainUiState(
     val manualInput: String = "",
     val selectedMinutes: Long? = 10,
-    val recognizedText: String = "",
     val lastAudioPath: String? = null,
-    val isListening: Boolean = false,
+    val isRecording: Boolean = false,
     val message: String? = null,
     val todos: List<TodoUiItem> = emptyList(),
 )

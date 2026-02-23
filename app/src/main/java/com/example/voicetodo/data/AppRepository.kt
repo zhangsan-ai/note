@@ -76,6 +76,8 @@ class AppRepository(
 
     suspend fun enabledReminders(): List<ReminderEntity> = reminderDao.findEnabled()
 
+    suspend fun activeReminderCount(): Int = reminderDao.countEnabled()
+
     suspend fun reminderTodoId(reminderId: Long): Long? = reminderDao.getTodoId(reminderId)
 
     suspend fun todoTitle(todoId: Long): String = todoDao.getContent(todoId) ?: "待办"
