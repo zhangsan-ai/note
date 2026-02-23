@@ -12,6 +12,7 @@
 - 未关闭时自动每 5 分钟继续提醒（无限）
 - 常驻通知：有未完成提醒时通知栏保持驻留
 - 一键清除已完成（含二次确认）
+- 提供保活入口：精确闹钟、电池优化豁免、后台运行设置
 - 开机后恢复未关闭提醒
 
 ## 目录结构
@@ -28,6 +29,7 @@
 - `RECORD_AUDIO`
 - `POST_NOTIFICATIONS`
 - `SCHEDULE_EXACT_ALARM`
+- `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`
 - `RECEIVE_BOOT_COMPLETED`
 - `USE_FULL_SCREEN_INTENT`
 - `FOREGROUND_SERVICE`

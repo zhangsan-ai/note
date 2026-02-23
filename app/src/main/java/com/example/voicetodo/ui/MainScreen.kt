@@ -50,6 +50,9 @@ fun MainScreen(
     onPlayAudio: () -> Unit,
     onPlayItemAudio: (String) -> Unit,
     onToggleTestAlarmTone: () -> Unit,
+    onRequestExactAlarmAccess: () -> Unit,
+    onRequestBatteryOptimization: () -> Unit,
+    onOpenBackgroundSettings: () -> Unit,
     onMarkDone: (Long, Long?) -> Unit,
     onRequestClearCompleted: () -> Unit,
     onConfirmClearCompleted: () -> Unit,
@@ -96,6 +99,14 @@ fun MainScreen(
                         onInputChange = onInputChange,
                         onQuickSelected = onQuickSelected,
                         onAddManual = onAddManual,
+                    )
+                }
+
+                item {
+                    ReliabilityAccessCard(
+                        onRequestExactAlarmAccess = onRequestExactAlarmAccess,
+                        onRequestBatteryOptimization = onRequestBatteryOptimization,
+                        onOpenBackgroundSettings = onOpenBackgroundSettings,
                     )
                 }
 
@@ -168,6 +179,47 @@ fun MainScreen(
                 title = { Text("清除已完成") },
                 text = { Text("将删除全部已完成待办，此操作不可撤销。") },
             )
+        }
+    }
+}
+
+@Composable
+private fun ReliabilityAccessCard(
+    onRequestExactAlarmAccess: () -> Unit,
+    onRequestBatteryOptimization: () -> Unit,
+    onOpenBackgroundSettings: () -> Unit,
+) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Text(
+                text = "后台保活权限",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                text = "为提升到点提醒可靠性，请开启以下权限和设置。",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Button(onClick = onRequestExactAlarmAccess) {
+                    Text("申请精确闹钟")
+                }
+                Button(onClick = onRequestBatteryOptimization) {
+                    Text("忽略电池优化")
+                }
+                Button(onClick = onOpenBackgroundSettings) {
+                    Text("后台运行设置")
+                }
+            }
         }
     }
 }
