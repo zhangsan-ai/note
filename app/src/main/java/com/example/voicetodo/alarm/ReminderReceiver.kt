@@ -27,7 +27,7 @@ class ReminderReceiver : BroadcastReceiver() {
                 val info = container.repository.reminderNotificationInfo(reminderId) ?: return@launch
                 container.notifier.showReminder(
                     reminderId = reminderId,
-                    contentText = info.contentText,
+                    contentText = info.contentText.ifBlank { "待办提醒" },
                     hasAudio = !info.audioPath.isNullOrBlank(),
                 )
 

@@ -61,6 +61,9 @@ class ReminderNotifier(private val context: Context) {
     fun showReminder(reminderId: Long, contentText: String, hasAudio: Boolean) {
         if (!canPostNotifications()) return
         ensureChannel()
+        val detailText = normalizeNotificationText(contentText)
+        val collapsedTitle = buildCollapsedTitle(detailText)
+        val collapsedContent = buildCollapsedContent(detailText)
 
         val openIntent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
@@ -106,9 +109,15 @@ class ReminderNotifier(private val context: Context) {
 
         val notificationBuilder = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_dialog_info)
-            .setContentTitle("待办提醒")
-            .setContentText(contentText.ifBlank { "待办" })
-            .setStyle(NotificationCompat.BigTextStyle().bigText(contentText.ifBlank { "待办" }))
+            .setContentTitle(collapsedTitle)
+            .setContentText(collapsedContent)
+            .setSubText("待办提醒")
+            .setStyle(
+                NotificationCompat.BigTextStyle()
+                    .setBigContentTitle("待办详情")
+                    .bigText(detailText)
+                    .setSummaryText("待办提醒")
+            )
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
@@ -117,6 +126,14 @@ class ReminderNotifier(private val context: Context) {
             .setOnlyAlertOnce(false)
             .setFullScreenIntent(openPending, true)
             .setContentIntent(openPending)
+            .setPublicVersion(
+                NotificationCompat.Builder(context, CHANNEL_ID)
+                    .setSmallIcon(android.R.drawable.ic_dialog_info)
+                    .setContentTitle(collapsedTitle)
+                    .setContentText(detailText)
+                    .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+                    .build()
+            )
             .addAction(android.R.drawable.ic_menu_close_clear_cancel, "关闭", dismissPending)
             .addAction(android.R.drawable.ic_media_pause, "延后5分钟", snoozePending)
         if (hasAudio) {
@@ -199,6 +216,31 @@ class ReminderNotifier(private val context: Context) {
             ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
             ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
             ?: Uri.parse("content://settings/system/notification_sound")
+    }
+
+    private fun normalizeNotificationText(raw: String): String {
+        val normalized = raw
+            .replace(Regex("\\s+"), " ")
+            .trim()
+        return normalized.ifBlank { "待办内容为空" }
+    }
+
+    private fun buildCollapsedTitle(detailText: String): String {
+        val maxLen = 18
+        return if (detailText.length <= maxLen) {
+            detailText
+        } else {
+            "${detailText.take(maxLen)}…"
+        }
+    }
+
+    private fun buildCollapsedContent(detailText: String): String {
+        val maxLen = 28
+        return if (detailText.length <= maxLen) {
+            detailText
+        } else {
+            "${detailText.take(maxLen)}…"
+        }
     }
 
     companion object {
